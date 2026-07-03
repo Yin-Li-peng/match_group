@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>CJ沈阳法人赛事分组对决</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+    background: #f5f6fa;
+    padding: 12px;
+    min-height: 100vh;
+}
+.header {
+    text-align: center;
+    padding: 16px 0 12px;
+}
+.header h1 {
+    font-size: 20px;
+    color: #333;
+    font-weight: 600;
+}
+.header .sub {
+    font-size: 12px;
+    color: #999;
+    margin-top: 4px;
+}
+.card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+}
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.team-a-title { color: #0066FF; }
+.team-b-title { color: #E53935; }
+.team-inputs {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+.team-inputs textarea {
+    width: 100%;
+    height: 120px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 14px;
+    resize: none;
+    line-height: 1.6;
+    font-family: inherit;
+}
+.team-inputs textarea:focus {
+    outline: none;
+    border-color: #409EFF;
+}
+.team-inputs .hint {
+    font-size: 11px;
+    color: #999;
+    margin-top: 4px;
+    text-align: center;
+}
+.config-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+}
+.config-row label {
+    font-size: 14px;
+    color: #555;
+    white-space: nowrap;
+}
+.config-row input {
+    width: 60px;
+    padding: 8px 10px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    font-size: 16px;
+    text-align: center;
+    font-family: inherit;
+}
+.btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+.btn-row.full {
+    grid-template-columns: 1fr;
+}
+.btn {
+    padding: 14px;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+    font-family: inherit;
+}
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: #409EFF; }
+.btn-danger { background: #F56C6C; }
+.btn-success { background: #67C23A; }
+.btn-warning { background: #E6A23C; }
+.btn-secondary { background: #909399; }
+.count-badge {
+    text-align: center;
+    font-size: 14px;
+    color: #666;
+    padding: 8px 0;
+}
+.result-area {
+    background: #fafafa;
+    border-radius: 10px;
+    padding: 14px;
+    min-height: 100px;
+    font-size: 14px;
+    line-height: 1.8;
+}
+.result-area .match-line {
+    padding: 6px 0;
+    border-bottom: 1px solid #eee;
+}
+.result-area .match-line:last-child { border-bottom: none; }
+.result-area .single-tag {
+    color: #FF9800;
+    font-weight: 600;
+    font-size: 13px;
+}
+.result-area .double-tag {
+    color: #9C27B0;
+    font-weight: 600;
+    font-size: 13px;
+}
+.result-area .team-a-name {
+    color: #0066FF;
+    font-weight: 600;
+}
+.result-area .team-b-name {
+    color: #E53935;
+    font-weight: 600;
+}
+.result-area .vs-text {
+    color: #999;
+    margin: 0 6px;
+}
+.result-area .remain-title {
+    font-weight: 600;
+    color: #333;
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #ddd;
+}
+.result-area .remain-a { color: #0066FF; }
+.result-area .remain-b { color: #E53935; }
+.result-area .empty { color: #bbb; }
+.history-panel {
+    display: none;
+}
+.history-panel.show {
+    display: block;
+}
+.history-item {
+    background: #fff;
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+.history-item .history-header {
+    font-size: 13px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 8px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid #f0f0f0;
+}
+.history-item .history-time {
+    font-size: 11px;
+    color: #999;
+    font-weight: normal;
+}
+.empty-state {
+    text-align: center;
+    color: #bbb;
+    padding: 30px;
+    font-size: 14px;
+}
+.toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0,0,0,0.75);
+    color: #fff;
+    padding: 14px 24px;
+    border-radius: 10px;
+    font-size: 14px;
+    z-index: 1000;
+    display: none;
+    white-space: nowrap;
+}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1><img src="data:image/png;base64,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" style="width:32px;height:32px;vertical-align:middle;margin-right:6px;border-radius:50%;"> 赛事分组对决</h1>
+    <div class="sub">CJ沈阳法人 · 版权归个人所有</div>
+</div>
+
+<!-- 队员输入 -->
+<div class="card">
+    <div class="team-inputs">
+        <div>
+            <div class="card-title team-a-title">🔵 蓝队队员</div>
+            <textarea id="teamA" placeholder="每行输入一个队员名字&#10;例如：&#10;张三&#10;李四&#10;王五"></textarea>
+            <div class="hint">每行一人</div>
+        </div>
+        <div>
+            <div class="card-title team-b-title">🔴 红队队员</div>
+            <textarea id="teamB" placeholder="每行输入一个队员名字&#10;例如：&#10;钱九&#10;吴十&#10;郑十一"></textarea>
+            <div class="hint">每行一人</div>
+        </div>
+    </div>
+</div>
+
+<!-- 场次配置 -->
+<div class="card">
+    <div class="config-row">
+        <label>单打场次：</label>
+        <input type="number" id="singleNum" value="1" min="0">
+        <label>双打场次：</label>
+        <input type="number" id="doubleNum" value="2" min="0">
+    </div>
+</div>
+
+<!-- 操作按钮 -->
+<div class="card" style="padding: 10px 14px;">
+    <div class="btn-row">
+        <button class="btn btn-primary" onclick="generateMatch()">🎲 点击分组对决</button>
+        <button class="btn btn-danger" onclick="resetAll()">🔄 全部复位</button>
+    </div>
+    <div class="btn-row">
+        <button class="btn btn-success" onclick="exportResults()">📤 导出记录</button>
+        <button class="btn btn-secondary" id="toggleBtn" onclick="toggleHistory()">📋 显示历史记录</button>
+    </div>
+    <div class="count-badge" id="countBadge">已分组次数：0</div>
+</div>
+
+<!-- 本次结果 -->
+<div class="card">
+    <div class="card-title">📋 本次分组结果</div>
+    <div class="result-area" id="resultArea">
+        <div class="empty-state">点击上方「分组对决」按钮开始</div>
+    </div>
+</div>
+
+<!-- 历史记录 -->
+<div class="history-panel" id="historyPanel">
+    <div class="card-title" style="margin-bottom:10px;">📜 历史分组记录</div>
+    <div id="historyList"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let sortCount = 0;
+let historyRecords = [];
+let historyVisible = false;
+
+// Fisher-Yates 洗牌
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.style.display = 'block';
+    setTimeout(() => { t.style.display = 'none'; }, 2000);
+}
+
+function generateMatch() {
+    // 读取队员
+    const teamA = document.getElementById('teamA').value
+        .split('\n').map(s => s.trim()).filter(s => s);
+    const teamB = document.getElementById('teamB').value
+        .split('\n').map(s => s.trim()).filter(s => s);
+
+    if (!teamA.length || !teamB.length) {
+        showToast('请完整录入蓝队、红队队员名单！');
+        return;
+    }
+
+    // 读取场次
+    const singleNum = parseInt(document.getElementById('singleNum').value) || 0;
+    const doubleNum = parseInt(document.getElementById('doubleNum').value) || 0;
+
+    if (singleNum < 0 || doubleNum < 0) {
+        showToast('场次不能为负数！');
+        return;
+    }
+    if (singleNum + doubleNum === 0) {
+        showToast('至少设置1场比赛！');
+        return;
+    }
+
+    // 洗牌
+    const aShuffle = shuffle(teamA);
+    const bShuffle = shuffle(teamB);
+
+    // 构建场次
+    const allMatches = [];
+    for (let i = 1; i <= singleNum; i++) allMatches.push(['single', i]);
+    for (let i = 1; i <= doubleNum; i++) allMatches.push(['double', i]);
+    const shuffledMatches = shuffle(allMatches);
+
+    // 分配
+    const matchResult = [];
+    let idxA = 0, idxB = 0;
+
+    for (const [type, num] of shuffledMatches) {
+        if (type === 'single') {
+            const aPlayer = idxA < aShuffle.length ? aShuffle[idxA] : '轮空';
+            const bPlayer = idxB < bShuffle.length ? bShuffle[idxB] : '轮空';
+            matchResult.push({ type: 'single', num, a: aPlayer, b: bPlayer });
+            idxA++; idxB++;
+        } else {
+            const a1 = idxA < aShuffle.length ? aShuffle[idxA] : '轮空';
+            const a2 = (idxA + 1) < aShuffle.length ? aShuffle[idxA + 1] : '轮空';
+            const b1 = idxB < bShuffle.length ? bShuffle[idxB] : '轮空';
+            const b2 = (idxB + 1) < bShuffle.length ? bShuffle[idxB + 1] : '轮空';
+            matchResult.push({ type: 'double', num, a1, a2, b1, b2 });
+            idxA += 2; idxB += 2;
+        }
+    }
+
+    const remainA = aShuffle.slice(idxA);
+    const remainB = bShuffle.slice(idxB);
+
+    // 保存记录
+    const now = new Date();
+    const timeStr = now.getHours().toString().padStart(2,'0') + ':' +
+                    now.getMinutes().toString().padStart(2,'0') + ':' +
+                    now.getSeconds().toString().padStart(2,'0');
+
+    historyRecords.unshift({
+        round: sortCount + 1,
+        time: timeStr,
+        matches: matchResult,
+        remainA, remainB,
+        teamA: [...teamA], teamB: [...teamB]
+    });
+
+    // 渲染结果
+    renderResult(matchResult, remainA, remainB);
+
+    // 如果历史面板可见，刷新
+    if (historyVisible) renderHistory();
+
+    sortCount++;
+    document.getElementById('countBadge').textContent = '已分组次数：' + sortCount;
+}
+
+function renderResult(matches, remainA, remainB) {
+    const area = document.getElementById('resultArea');
+    let html = '';
+
+    for (const m of matches) {
+        if (m.type === 'single') {
+            html += `<div class="match-line">
+                <span class="single-tag">单打第${m.num}场：</span>
+                <span class="${m.a === '轮空' ? 'empty' : 'team-a-name'}">${m.a}</span>
+                <span class="vs-text">VS</span>
+                <span class="${m.b === '轮空' ? 'empty' : 'team-b-name'}">${m.b}</span>
+            </div>`;
+        } else {
+            html += `<div class="match-line">
+                <span class="double-tag">双打第${m.num}场：</span>
+                <span class="${m.a1 === '轮空' ? 'empty' : 'team-a-name'}">${m.a1}</span>、
+                <span class="${m.a2 === '轮空' ? 'empty' : 'team-a-name'}">${m.a2}</span>
+                <span class="vs-text">VS</span>
+                <span class="${m.b1 === '轮空' ? 'empty' : 'team-b-name'}">${m.b1}</span>、
+                <span class="${m.b2 === '轮空' ? 'empty' : 'team-b-name'}">${m.b2}</span>
+            </div>`;
+        }
+    }
+
+    if (remainA.length || remainB.length) {
+        html += `<div class="remain-title">===== 剩余轮空人员 =====</div>`;
+        html += `<div> 蓝队轮空：<span class="${remainA.length ? 'remain-a' : 'empty'}">${remainA.length ? remainA.join('、') : '无'}</span></div>`;
+        html += `<div> 红队轮空：<span class="${remainB.length ? 'remain-b' : 'empty'}">${remainB.length ? remainB.join('、') : '无'}</span></div>`;
+    }
+
+    area.innerHTML = html;
+}
+
+function renderHistory() {
+    const list = document.getElementById('historyList');
+    if (!historyRecords.length) {
+        list.innerHTML = '<div class="empty-state">暂无历史记录</div>';
+        return;
+    }
+
+    let html = '';
+    for (const rec of historyRecords) {
+        html += `<div class="history-item">
+            <div class="history-header">第${rec.round}次分组 <span class="history-time">${rec.time}</span></div>`;
+
+        for (const m of rec.matches) {
+            if (m.type === 'single') {
+                html += `<div class="match-line">
+                    <span class="single-tag">单打第${m.num}场：</span>
+                    <span class="${m.a === '轮空' ? 'empty' : 'team-a-name'}">${m.a}</span>
+                    <span class="vs-text">VS</span>
+                    <span class="${m.b === '轮空' ? 'empty' : 'team-b-name'}">${m.b}</span>
+                </div>`;
+            } else {
+                html += `<div class="match-line">
+                    <span class="double-tag">双打第${m.num}场：</span>
+                    <span class="${m.a1 === '轮空' ? 'empty' : 'team-a-name'}">${m.a1}</span>、
+                    <span class="${m.a2 === '轮空' ? 'empty' : 'team-a-name'}">${m.a2}</span>
+                    <span class="vs-text">VS</span>
+                    <span class="${m.b1 === '轮空' ? 'empty' : 'team-b-name'}">${m.b1}</span>、
+                    <span class="${m.b2 === '轮空' ? 'empty' : 'team-b-name'}">${m.b2}</span>
+                </div>`;
+            }
+        }
+
+        if (rec.remainA.length || rec.remainB.length) {
+            html += `<div class="remain-title">===== 轮空 =====</div>`;
+            html += `<div style="font-size:13px">A：${rec.remainA.length ? rec.remainA.join('、') : '无'} &nbsp;|&nbsp; B：${rec.remainB.length ? rec.remainB.join('、') : '无'}</div>`;
+        }
+
+        html += `</div>`;
+    }
+
+    list.innerHTML = html;
+}
+
+function toggleHistory() {
+    const panel = document.getElementById('historyPanel');
+    const btn = document.getElementById('toggleBtn');
+    historyVisible = !historyVisible;
+
+    if (historyVisible) {
+        panel.classList.add('show');
+        btn.textContent = '📋 隐藏历史记录';
+        btn.classList.remove('btn-secondary');
+        btn.classList.add('btn-warning');
+        renderHistory();
+        // 滚动到历史区域
+        setTimeout(() => panel.scrollIntoView({ behavior: 'smooth' }), 100);
+    } else {
+        panel.classList.remove('show');
+        btn.textContent = '📋 显示历史记录';
+        btn.classList.remove('btn-warning');
+        btn.classList.add('btn-secondary');
+    }
+}
+
+function resetAll() {
+    sortCount = 0;
+    historyRecords = [];
+    document.getElementById('countBadge').textContent = '已分组次数：0';
+    document.getElementById('resultArea').innerHTML = '<div class="empty-state">点击上方「分组对决」按钮开始</div>';
+    if (historyVisible) {
+        document.getElementById('historyList').innerHTML = '<div class="empty-state">暂无历史记录</div>';
+    }
+    showToast('已复位');
+}
+
+function exportResults() {
+    if (!historyRecords.length) {
+        showToast('暂无分组记录可导出！');
+        return;
+    }
+
+    let text = 'CJ沈阳法人赛事分组对决记录\n';
+    text += '导出时间：' + new Date().toLocaleString() + '\n';
+    text += '='.repeat(40) + '\n\n';
+
+    for (const rec of historyRecords) {
+        text += `================= 第${rec.round}次分组 [${rec.time}] =================\n`;
+        for (const m of rec.matches) {
+            if (m.type === 'single') {
+                text += `单打第${m.num}场：${m.a} VS ${m.b}\n`;
+            } else {
+                text += `双打第${m.num}场：${m.a1}、${m.a2} VS ${m.b1}、${m.b2}\n`;
+            }
+        }
+        if (rec.remainA.length || rec.remainB.length) {
+            text += `\n蓝队轮空：${rec.remainA.length ? rec.remainA.join('、') : '无'}\n`;
+            text += `红队轮空：${rec.remainB.length ? rec.remainB.join('、') : '无'}\n`;
+        }
+        text += '\n';
+    }
+
+    const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = '赛事分组记录_' + new Date().toISOString().slice(0,10) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    showToast('导出成功！');
+}
+</script>
+
+</body>
+</html>
