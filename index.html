@@ -302,7 +302,6 @@ function buildMatches(team, singleCount, doubleCount) {
     const players = shuffle([...team]);
     const totalSlots = singleCount + doubleCount * 2;
 
-    // 1. 把所有位置拆成平等槽位
     const slots = [];
     for (let i = 0; i < singleCount; i++) {
         slots.push({ type: 'single', matchIdx: i });
@@ -312,10 +311,8 @@ function buildMatches(team, singleCount, doubleCount) {
         slots.push({ type: 'double', matchIdx: i, pos: 1 });
     }
 
-    // 2. 随机打乱所有槽位
     const shuffledSlots = shuffle(slots);
 
-    // 3. 把队员随机分配到槽位（轮空随机出现在任何位置）
     const map = {};
     for (let i = 0; i < shuffledSlots.length; i++) {
         const s = shuffledSlots[i];
@@ -323,7 +320,6 @@ function buildMatches(team, singleCount, doubleCount) {
         map[key] = i < players.length ? players[i] : '轮空';
     }
 
-    // 4. 按原结构重组
     const singles = [];
     for (let i = 0; i < singleCount; i++) {
         singles.push(map[`s_${i}`] || '轮空');
@@ -337,10 +333,52 @@ function buildMatches(team, singleCount, doubleCount) {
         ]);
     }
 
-    // 5. 剩余人员（仅当人数超过总需求时）
     const remain = players.length > totalSlots ? players.slice(totalSlots) : [];
-
     return { singles, doubles, remain };
+}
+
+// ========== 尹/高冲突检测 ==========
+function hasChar(name, ch) {
+    return typeof name === 'string' && name.includes(ch);
+}
+function hasYin(name) { return hasChar(name, '尹'); }
+function hasGao(name) { return hasChar(name, '高'); }
+
+/**
+ * 检查单场比赛是否同时出现"尹"和"高"
+ * 模式：同场任何人（队友+对手）不能同时有尹和高
+ */
+function isMatchConflict(match) {
+    const names = [];
+    if (match.type === 'single') {
+        names.push(match.a, match.b);
+    } else {
+        names.push(match.a1, match.a2, match.b1, match.b2);
+    }
+    const yin = names.some(n => hasYin(n));
+    const gao = names.some(n => hasGao(n));
+    return yin && gao;
+}
+
+/* 
+// 如果只想禁止"对手"关系（允许同一方双打内部有尹+高），把上面函数换成这个：
+function isMatchConflict(match) {
+    let yinA, gaoA, yinB, gaoB;
+    if (match.type === 'single') {
+        yinA = hasYin(match.a); gaoA = hasGao(match.a);
+        yinB = hasYin(match.b); gaoB = hasGao(match.b);
+    } else {
+        const aNames = [match.a1, match.a2];
+        const bNames = [match.b1, match.b2];
+        yinA = aNames.some(hasYin); gaoA = aNames.some(hasGao);
+        yinB = bNames.some(hasYin); gaoB = bNames.some(hasGao);
+    }
+    return (yinA && gaoB) || (gaoA && yinB);
+}
+*/
+
+function hasAnyConflict(matches) {
+    return matches.some(isMatchConflict);
 }
 
 function showToast(msg) {
@@ -351,7 +389,6 @@ function showToast(msg) {
 }
 
 function generateMatch() {
-    // 读取队员
     const teamA = document.getElementById('teamA').value
         .split('\n').map(s => s.trim()).filter(s => s);
     const teamB = document.getElementById('teamB').value
@@ -374,38 +411,45 @@ function generateMatch() {
         return;
     }
 
-    // 两队独立生成，轮空随机分布
-    const aResult = buildMatches(teamA, singleNum, doubleNum);
-    const bResult = buildMatches(teamB, singleNum, doubleNum);
+    // ========== 带冲突检测的随机分配（最多重试100次） ==========
+    const MAX_RETRY = 100;
+    let attempts = 0;
+    let shuffledMatches, aResult, bResult;
 
-    // 随机打乱红队双打对阵顺序
-    const bDoublesShuffled = shuffle(bResult.doubles);
+    do {
+        aResult = buildMatches(teamA, singleNum, doubleNum);
+        bResult = buildMatches(teamB, singleNum, doubleNum);
+        const bDoublesShuffled = shuffle(bResult.doubles);
 
-    // 构建所有场次
-    const allMatches = [];
-    for (let i = 0; i < singleNum; i++) {
-        allMatches.push({
-            type: 'single',
-            num: i + 1,
-            a: aResult.singles[i] || '轮空',
-            b: bResult.singles[i] || '轮空'
-        });
+        const allMatches = [];
+        for (let i = 0; i < singleNum; i++) {
+            allMatches.push({
+                type: 'single',
+                num: i + 1,
+                a: aResult.singles[i] || '轮空',
+                b: bResult.singles[i] || '轮空'
+            });
+        }
+        for (let i = 0; i < doubleNum; i++) {
+            allMatches.push({
+                type: 'double',
+                num: i + 1,
+                a1: aResult.doubles[i][0],
+                a2: aResult.doubles[i][1],
+                b1: bDoublesShuffled[i][0],
+                b2: bDoublesShuffled[i][1]
+            });
+        }
+
+        shuffledMatches = shuffle(allMatches);
+        attempts++;
+    } while (hasAnyConflict(shuffledMatches) && attempts < MAX_RETRY);
+
+    if (hasAnyConflict(shuffledMatches)) {
+        showToast('无法满足"尹/高不同场"约束，请调整名单或场次');
+        return;
     }
-    for (let i = 0; i < doubleNum; i++) {
-        allMatches.push({
-            type: 'double',
-            num: i + 1,
-            a1: aResult.doubles[i][0],
-            a2: aResult.doubles[i][1],
-            b1: bDoublesShuffled[i][0],
-            b2: bDoublesShuffled[i][1]
-        });
-    }
 
-    // 最后打乱出场顺序
-    const shuffledMatches = shuffle(allMatches);
-
-    // 保存结果
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2,'0') + ':' +
                     now.getMinutes().toString().padStart(2,'0') + ':' +
