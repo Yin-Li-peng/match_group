@@ -287,7 +287,7 @@ function randomInt(max) {
     return Math.floor(Math.random() * max);
 }
 
-// ========== 标准 Fisher-Yates 洗牌（1轮即数学均匀分布） ==========
+// ========== 标准 Fisher-Yates 洗牌 ==========
 function shuffle(arr) {
     const a = [...arr];
     for (let i = a.length - 1; i > 0; i--) {
@@ -297,29 +297,48 @@ function shuffle(arr) {
     return a;
 }
 
-// ========== 核心：随机生成对阵（彻底打破索引绑定） ==========
+// ========== 核心：随机生成对阵（轮空随机分布） ==========
 function buildMatches(team, singleCount, doubleCount) {
     const players = shuffle([...team]);
-    const singles = [];
-    const doubles = [];
-    let idx = 0;
+    const totalSlots = singleCount + doubleCount * 2;
 
-    // 1. 随机选单打选手
+    // 1. 把所有位置拆成平等槽位
+    const slots = [];
     for (let i = 0; i < singleCount; i++) {
-        singles.push(players[idx]);
-        idx++;
+        slots.push({ type: 'single', matchIdx: i });
     }
-
-    // 2. 剩下的人随机组成双打（两两一组，完全随机）
-    const restPlayers = shuffle(players.slice(idx));
     for (let i = 0; i < doubleCount; i++) {
-        const p1 = restPlayers[i * 2];
-        const p2 = restPlayers[i * 2 + 1];
-        doubles.push([p1 || '轮空', p2 || '轮空']);
+        slots.push({ type: 'double', matchIdx: i, pos: 0 });
+        slots.push({ type: 'double', matchIdx: i, pos: 1 });
     }
 
-    // 3. 剩下的轮空人员
-    const remain = restPlayers.slice(doubleCount * 2);
+    // 2. 随机打乱所有槽位
+    const shuffledSlots = shuffle(slots);
+
+    // 3. 把队员随机分配到槽位（轮空随机出现在任何位置）
+    const map = {};
+    for (let i = 0; i < shuffledSlots.length; i++) {
+        const s = shuffledSlots[i];
+        const key = s.type === 'single' ? `s_${s.matchIdx}` : `d_${s.matchIdx}_${s.pos}`;
+        map[key] = i < players.length ? players[i] : '轮空';
+    }
+
+    // 4. 按原结构重组
+    const singles = [];
+    for (let i = 0; i < singleCount; i++) {
+        singles.push(map[`s_${i}`] || '轮空');
+    }
+
+    const doubles = [];
+    for (let i = 0; i < doubleCount; i++) {
+        doubles.push([
+            map[`d_${i}_0`] || '轮空',
+            map[`d_${i}_1`] || '轮空'
+        ]);
+    }
+
+    // 5. 剩余人员（仅当人数超过总需求时）
+    const remain = players.length > totalSlots ? players.slice(totalSlots) : [];
 
     return { singles, doubles, remain };
 }
@@ -355,11 +374,11 @@ function generateMatch() {
         return;
     }
 
-    // 两队独立生成单打、双打组合，完全解耦
+    // 两队独立生成，轮空随机分布
     const aResult = buildMatches(teamA, singleNum, doubleNum);
     const bResult = buildMatches(teamB, singleNum, doubleNum);
 
-    // 随机打乱双打对阵顺序（A1对B1还是B2完全随机）
+    // 随机打乱红队双打对阵顺序
     const bDoublesShuffled = shuffle(bResult.doubles);
 
     // 构建所有场次
