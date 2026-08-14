@@ -337,17 +337,17 @@ function buildMatches(team, singleCount, doubleCount) {
     return { singles, doubles, remain };
 }
 
-// ========== 冲突检测：被选人 vs 冲突人 ==========
+// ========== 冲突检测：被选 vs 冲突 ==========
 function hasChar(name, ch) {
     return typeof name === 'string' && name.includes(ch);
 }
 function hasYin(name) { return hasChar(name, '尹'); }
 function hasForbidden(name) {
-    return hasChar(name, '晓') || hasChar(name, '小') || hasChar(name, '广') || hasChar(name, '曹');
+    return hasChar(name, '海') || hasChar(name, '朱') || hasChar(name, '思');
 }
 
 /**
- * 检查单场比赛是否违反"被选人"不能碰到对手含"冲突人"的规则
+ * 检查单场比赛是否违反"被选"不能碰到对手含"冲突"的规则
  * 队友内部不算冲突，只检测跨队（对手）关系
  */
 function isMatchConflict(match) {
@@ -444,7 +444,7 @@ function generateMatch() {
     } while (hasConflict && attempts < MAX_RETRY);
 
     if (hasConflict) {
-        showToast('无法满足"被选人 vs 冲突人"回避约束，请调整名单或场次');
+        showToast('无法满足"被选 vs 冲突"回避约束，请调整名单或场次');
         return;
     }
 
