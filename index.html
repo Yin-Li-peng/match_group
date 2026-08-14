@@ -302,6 +302,7 @@ function buildMatches(team, singleCount, doubleCount) {
     const players = shuffle([...team]);
     const totalSlots = singleCount + doubleCount * 2;
 
+    // 1. 把所有位置拆成平等槽位
     const slots = [];
     for (let i = 0; i < singleCount; i++) {
         slots.push({ type: 'single', matchIdx: i });
@@ -311,8 +312,10 @@ function buildMatches(team, singleCount, doubleCount) {
         slots.push({ type: 'double', matchIdx: i, pos: 1 });
     }
 
+    // 2. 随机打乱所有槽位
     const shuffledSlots = shuffle(slots);
 
+    // 3. 把队员随机分配到槽位（轮空随机出现在任何位置）
     const map = {};
     for (let i = 0; i < shuffledSlots.length; i++) {
         const s = shuffledSlots[i];
@@ -320,6 +323,7 @@ function buildMatches(team, singleCount, doubleCount) {
         map[key] = i < players.length ? players[i] : '轮空';
     }
 
+    // 4. 按原结构重组
     const singles = [];
     for (let i = 0; i < singleCount; i++) {
         singles.push(map[`s_${i}`] || '轮空');
@@ -333,43 +337,10 @@ function buildMatches(team, singleCount, doubleCount) {
         ]);
     }
 
+    // 5. 剩余人员（仅当人数超过总需求时）
     const remain = players.length > totalSlots ? players.slice(totalSlots) : [];
+
     return { singles, doubles, remain };
-}
-
-// ========== 冲突检测：被选 vs 冲突 ==========
-function hasChar(name, ch) {
-    return typeof name === 'string' && name.includes(ch);
-}
-function hasYin(name) { return hasChar(name, '尹'); }
-function hasForbidden(name) {
-    return hasChar(name, '海') || hasChar(name, '朱') || hasChar(name, '思');
-}
-
-/**
- * 检查单场比赛是否违反"被选"不能碰到对手含"冲突"的规则
- * 队友内部不算冲突，只检测跨队（对手）关系
- */
-function isMatchConflict(match) {
-    if (match.type === 'single') {
-        const aHasYin = hasYin(match.a);
-        const bHasYin = hasYin(match.b);
-        const aHasForbidden = hasForbidden(match.a);
-        const bHasForbidden = hasForbidden(match.b);
-        return (aHasYin && bHasForbidden) || (bHasYin && aHasForbidden);
-    } else {
-        const aNames = [match.a1, match.a2];
-        const bNames = [match.b1, match.b2];
-        const aHasYin = aNames.some(hasYin);
-        const bHasYin = bNames.some(hasYin);
-        const aHasForbidden = aNames.some(hasForbidden);
-        const bHasForbidden = bNames.some(hasForbidden);
-        return (aHasYin && bHasForbidden) || (bHasYin && aHasForbidden);
-    }
-}
-
-function hasAnyConflict(matches) {
-    return matches.some(isMatchConflict);
 }
 
 function showToast(msg) {
@@ -380,6 +351,7 @@ function showToast(msg) {
 }
 
 function generateMatch() {
+    // 读取队员
     const teamA = document.getElementById('teamA').value
         .split('\n').map(s => s.trim()).filter(s => s);
     const teamB = document.getElementById('teamB').value
@@ -402,52 +374,38 @@ function generateMatch() {
         return;
     }
 
-    // ========== 新增：读取冲突检测起始次数 ==========
-	const threshold = 4;              // 冲突检测值
-	const shouldCheck = (sortCount + 1) >= threshold;
+    // 两队独立生成，轮空随机分布
+    const aResult = buildMatches(teamA, singleNum, doubleNum);
+    const bResult = buildMatches(teamB, singleNum, doubleNum);
 
-    // ========== 随机分配（达到次数后才检测冲突） ==========
-    const MAX_RETRY = 100;
-    let attempts = 0;
-    let shuffledMatches, aResult, bResult;
-    let hasConflict = false;
+    // 随机打乱红队双打对阵顺序
+    const bDoublesShuffled = shuffle(bResult.doubles);
 
-    do {
-        aResult = buildMatches(teamA, singleNum, doubleNum);
-        bResult = buildMatches(teamB, singleNum, doubleNum);
-        const bDoublesShuffled = shuffle(bResult.doubles);
-
-        const allMatches = [];
-        for (let i = 0; i < singleNum; i++) {
-            allMatches.push({
-                type: 'single',
-                num: i + 1,
-                a: aResult.singles[i] || '轮空',
-                b: bResult.singles[i] || '轮空'
-            });
-        }
-        for (let i = 0; i < doubleNum; i++) {
-            allMatches.push({
-                type: 'double',
-                num: i + 1,
-                a1: aResult.doubles[i][0],
-                a2: aResult.doubles[i][1],
-                b1: bDoublesShuffled[i][0],
-                b2: bDoublesShuffled[i][1]
-            });
-        }
-
-        shuffledMatches = shuffle(allMatches);
-        attempts++;
-        // 关键：只有达到设定次数后才计算冲突
-        hasConflict = shouldCheck && hasAnyConflict(shuffledMatches);
-    } while (hasConflict && attempts < MAX_RETRY);
-
-    if (hasConflict) {
-        showToast('无法满足"被选 vs 冲突"回避约束，请调整名单或场次');
-        return;
+    // 构建所有场次
+    const allMatches = [];
+    for (let i = 0; i < singleNum; i++) {
+        allMatches.push({
+            type: 'single',
+            num: i + 1,
+            a: aResult.singles[i] || '轮空',
+            b: bResult.singles[i] || '轮空'
+        });
+    }
+    for (let i = 0; i < doubleNum; i++) {
+        allMatches.push({
+            type: 'double',
+            num: i + 1,
+            a1: aResult.doubles[i][0],
+            a2: aResult.doubles[i][1],
+            b1: bDoublesShuffled[i][0],
+            b2: bDoublesShuffled[i][1]
+        });
     }
 
+    // 最后打乱出场顺序
+    const shuffledMatches = shuffle(allMatches);
+
+    // 保存结果
     const now = new Date();
     const timeStr = now.getHours().toString().padStart(2,'0') + ':' +
                     now.getMinutes().toString().padStart(2,'0') + ':' +
